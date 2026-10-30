@@ -72,6 +72,7 @@ Local preview exception: a Service-fronted App may provide a Service-only local 
 - Do not silently downgrade generated Apps from unified login because local OAuth prerequisites are missing; report the blocker.
 - Before reporting publish/login readiness, verify the auth path with the agent or platform checks. Do not leave domain access, DevTools, k8s logs, or cookie inspection as user-only validation steps.
 - For Service-fronted Apps, `/api/make/auth/**` and `/api/make/oauth/**` are required namespace-level Service proxy contracts under the published App Service prefix, not optional convenience routes or endpoint-by-endpoint allowlists.
+- A shared Service gateway-client URL decorator sets one outer query `appKey` from central `config.appKey` (`MAKE_APP_KEY`) for auth/oauth calls, including browser proxies and internal identity/session queries. Override browser values without changing the body, other OAuth values or redirects. Read `references/auth-app-context.md` for old-App compatibility; this is App context, not identity or permission proof.
 - Every Service-fronted Make App must ensure the default `/api/make/app/principal/permission` route receives the established browser session context.
 - Do not implement auth readiness by adding a broad `/api/make/**` passthrough. Only auth/oauth are default transparent namespaces; Service-owned business requests stay under explicit `/api/make/app/**` routes, and unknown `/api/make/**` paths fail closed.
 - For Service-fronted Apps, Service must preserve the App host context for every make-gateway call: derive `X-Forwarded-Host` from inbound `Host`, do not trust client-supplied `X-Forwarded-Host`, add `X-Forwarded-Proto`, and share the same helper for auth and business proxy requests.
@@ -101,6 +102,7 @@ Local preview exception: a Service-fronted App may provide a Service-only local 
 - Shared request adapter and 401/403 handling: `references/request-adapter.md`
 - Default unified login mode: `references/unified-login-mode.md`
 - Service-fronted unified-login mode: `references/service-fronted-mode.md`
+- Uniform Service auth/oauth appKey injection and OAuth transaction boundaries: `references/auth-app-context.md`
 - 401, 403, and logout behavior: `references/logout-and-401.md`
 - Auth incident diagnosis: `references/troubleshooting.md`
 - Minimal Service-fronted route-shape example: `references/service-fronted-node-example.md`; read it only after `references/service-fronted-mode.md`.
