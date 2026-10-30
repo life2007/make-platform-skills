@@ -1,5 +1,7 @@
 # Make Data Adapter
 
+本文件描述 Make Data 普通记录适配。审批任务办理的 recordPatch 属于 Workflow：按 [审批接口合同](../../make-app-approval/references/workflow-api.md) 保留任务字段格式与节点授权，不进入这里的普通 Lookup 关系合成和记录更新链路。任务字段基础定义及附件类型核验读取 bpm-node-form-metadata 的 TASK 场景，不使用下文普通权限 Schema 的字段来源，不回退普通 entity 补源字段，也不以节点元数据扩大节点授权。
+
 Use this reference when implementing Service adapters that call Make platform APIs.
 
 ## Adapter ownership
@@ -190,6 +192,12 @@ Rules:
 - ordinary grouped leaf records should call records mode with `group` omitted or `null`; never send `group: []`
 - do not mutate formatted UI display labels into submit payloads
 
+## Aggregate statistics
+
+For dashboard metrics, charts, or AI analysis over matching Make records, prefer the server-side aggregate API when it expresses the requested calculation. Read the bundled [Data API aggregate contract](../../makedsl/references/DataAPIDesign.md#聚合统计-record-数据); the [upstream design](https://git.qtech.cn/make/AgenticDSL/-/blob/main/Design/DataAPIDesign.md#聚合统计-record-数据) is the authoritative reference.
+
+Call `POST /data/v1/aggregate` with `X-Make-Target: MakeService.ListResources` through the existing Make adapter. Reuse its runtime path scope, configured `appKey`, login context, cancellation, and response handling. Push supported calculations down, then perform any needed result combination or reasonably sized detail calculation in the Service; UI consumes the resulting business metrics. Read [query-planning examples](../../makedsl/references/DataAPIDesign.md#不能直接表达时的方案选择) when a single aggregate cannot meet the requirement. Record-list expansion and `groupFilter` remain the separate `make-app-group` workflow.
+
 ## User and department adapters
 
 Default candidate adapter contracts:
@@ -210,7 +218,9 @@ Rules:
 
 ## Lookup options adapter/service
 
-Lookup option service should:
+本节 Schema 解析步骤只用于普通对象 Lookup。审批新建 START 与任务 TASK 统一按 [节点 Lookup 依赖合同](../../make-app-approval/references/lookup-metadata.md) 读取节点内关系和目标 key/type；每次候选读取重验相应启动字段/任务授权，并保留目标对象、字段和记录的读取权限，不通过普通 relation/entity/Schema 补齐 BPM 元数据。
+
+Ordinary Lookup option service should:
 
 1. read runtime schema
 2. find the source entity and lookup field
@@ -226,7 +236,7 @@ Rules:
 - target record reads still go through `/make/data/v1/record` with forwarded login context, not makecli
 - reject unsupported relation direction, non-lookup fields, and missing target metadata with 400
 - do not leak full target records into dropdown APIs by default
-- In create mode, resolve the Lookup source field from 普通新建的 `createFields` 或 审批新建的权威 启动配置 字段；resolve the Lookup target entity and target display fields from the target's visible `fields`. Do not expose a target field solely because it is creatable.
+- In ordinary create mode, resolve the Lookup source field from `createFields`; resolve the Lookup target entity and target display fields from the target's visible `fields`. Do not expose a target field solely because it is creatable. BPM source authorization and dependency resolution follow the START/TASK contract above; target read permission checks still apply.
 
 ## Lookup relation update service
 
