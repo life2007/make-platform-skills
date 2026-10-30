@@ -159,10 +159,10 @@ test('no-query login bootstrap keeps return-context headers and cancellation', a
 for (const scope of ['/make', '/api/make']) {
   for (const path of ['/auth/current-context', '/oauth/future-callback']) {
     test(`internal Service call decorates ${scope}${path} without the browser proxy`, async () => {
-      const { withAuthAppContext, loadAuthAppConfig } = await example();
-      assert.equal(typeof withAuthAppContext, 'function', 'all Service gateway calls need one shared URL decorator');
+      const { withMakeAppContext, loadAuthAppConfig } = await example();
+      assert.equal(typeof withMakeAppContext, 'function', 'all Service gateway calls need one shared URL decorator');
       const original = new URL(`https://gateway.test${scope}${path}?appKey=forged&appKey=second&state=opaque%2Bvalue`);
-      const result = withAuthAppContext(original, loadAuthAppConfig({ MAKE_APP_KEY: 'configured-app' }));
+      const result = withMakeAppContext(original, loadAuthAppConfig({ MAKE_APP_KEY: 'configured-app' }));
       assert.deepEqual(result.searchParams.getAll('appKey'), ['configured-app']);
       assert.equal(result.searchParams.get('state'), 'opaque+value');
       assert.equal(result.pathname, original.pathname);
@@ -171,12 +171,52 @@ for (const scope of ['/make', '/api/make']) {
   }
 }
 
-test('the shared decorator does not change business or prefix-lookalike requests', async () => {
-  const { withAuthAppContext, loadAuthAppConfig } = await example();
-  assert.equal(typeof withAuthAppContext, 'function');
+for (const scope of ['/make', '/api/make']) {
+  for (const path of ['/meta/v1/schema', '/data/v1/record', '/app/ai/v1/chats', '/future/service']) {
+    test(`business namespace ${scope}${path} receives the configured App context`, async () => {
+      const { withMakeAppContext, loadAuthAppConfig } = await example();
+      const original = new URL(`https://gateway.test${scope}${path}?appKey=forged&appKey=second&filter=opaque%2Bvalue`);
+      const result = withMakeAppContext(original, loadAuthAppConfig({ MAKE_APP_KEY: 'configured-app' }));
+      assert.deepEqual(result.searchParams.getAll('appKey'), ['configured-app']);
+      assert.equal(result.searchParams.get('filter'), 'opaque+value');
+      assert.equal(result.pathname, original.pathname);
+      assert.deepEqual(original.searchParams.getAll('appKey'), ['forged', 'second']);
+    });
+  }
+}
+
+test('the shared decorator leaves non-Make and prefix-lookalike requests unchanged', async () => {
+  const { withMakeAppContext, loadAuthAppConfig } = await example();
+  assert.equal(typeof withMakeAppContext, 'function');
   const config = loadAuthAppConfig({ MAKE_APP_KEY: 'configured-app' });
-  for (const path of ['/make/meta/v1/schema', '/make/authenticate', '/api/make/oauth-other', '/other/auth/current-context']) {
+  for (const path of ['/health', '/api/config', '/maker/data/v1/record', '/api/maker/auth', '/other/auth/current-context']) {
     const original = new URL(`https://gateway.test${path}?appKey=business-contract&state=opaque%2Bvalue`);
-    assert.equal(withAuthAppContext(original, config).href, original.href);
+    assert.equal(withMakeAppContext(original, config).href, original.href);
   }
 });
+
+for (const mode of ['published', 'local-preview']) {
+  test(`${mode} documentation calls inject App context for auth and business alike`, async () => {
+    const { withMakeAppContext } = await example();
+    const guide = await readFile(new URL('../skills/make-app-auth/references/service-fronted-mode.md', import.meta.url), 'utf8');
+    const start = mode === 'published' ? 'const makeAuthBaseUrl =' : 'const publicGatewayOrigin =';
+    const source = [...guide.matchAll(/```ts\n([\s\S]*?)\n```/gu)].map(match => match[1])
+      .find(code => code.startsWith(start));
+    assert.ok(source, `the ${mode} upstream example must remain executable`);
+    const config = { appKey: 'configured-app' };
+    const calls = [];
+    const fetch = async (url, init) => { calls.push({ url: new URL(url), init }); return new Response('{}'); };
+    const recordPayload = { appKey: config.appKey, entityKey: 'Record', fields: [], pagination: {} };
+    const dependencies = mode === 'published'
+      ? { config, withMakeAppContext, fetch, entityKey: 'Record', fields: [], pagination: {},
+        authHeaders: new Headers(), businessHeaders: new Headers() }
+      : { config, fetch, recordPayload, makecliTokenHeaders: {},
+        readMakecliResolveJson: () => ({ make_api_origin: 'https://gateway.test' }),
+        makeFetch: (url, init) => fetch(withMakeAppContext(url, config), init) };
+    const AsyncFunction = Object.getPrototypeOf(async function () {}).constructor;
+    await new AsyncFunction(...Object.keys(dependencies), source)(...Object.values(dependencies));
+    assert.equal(calls.length, 2);
+    for (const call of calls) assert.deepEqual(call.url.searchParams.getAll('appKey'), [config.appKey]);
+    assert.equal(calls.at(-1).init.body, JSON.stringify(recordPayload));
+  });
+}

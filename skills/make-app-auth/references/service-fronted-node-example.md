@@ -47,8 +47,8 @@ export const listRecords = (entityKey: string, payload: unknown) =>
   `Location`; use manual redirect handling.
   The shared proxy injects one configured outer query `appKey` as described and
   tested in `auth-app-context.md`; do not rewrite OAuth values or request bodies.
-  Reuse that URL decorator in internal Service auth calls too; these do not pass
-  through the browser route dispatcher.
+  Reuse that URL decorator in all business adapters and internal Service Make
+  calls too; internal callers do not pass through the browser route dispatcher.
 - `/api/make/app/**` contains explicitly registered Service business routes.
   Do not create a broad `/api/make/**` passthrough; unmatched paths fail closed.
 - `MAKE_APP_LOCAL_PREVIEW=true` may provide only the documented local preview
