@@ -15,6 +15,8 @@ Skill 内容以本仓库为单一真相源；makecli 通过 npx 分发，构建�
 
 修改 Skill 后运行 `node scripts/lint-skill-metadata.mjs` 及 `.github/workflows/skill-metadata-lint.yml` 中的契约测试；规则与可观测结果保持一致。
 
+2026-11-02：PR #114 同步最新 beta，版本冲突保留 make-app-service 0.2.20；保留 beta 公共业务错误文案合同与既有 appKey 统一注入规则，不新增行为。
+
 2026-11-02：appKey 注入收敛为一处权威规则和一个共享 URL 装饰器，其他章节引用；示例直接执行行为验证，不重建认证代理。
 
 2026-10-30：Service 统一为前端驱动及内部 Make 请求注入配置 appKey，覆盖认证和业务调用；保留代理边界、OAuth 和旧 App 身份兼容，不规定接口业务归属。
@@ -131,5 +133,7 @@ Skill 内容以本仓库为单一真相源；makecli 通过 npx 分发，构建�
 2026-10-30：按产品确认，业务对象已通过、已拒绝、已撤回统一禁止普通编辑；补齐公共包 0.2.11 的宿主兼容与原生能力验证边界，保留任务办理及删除独立授权。
 
 2026-10-30：在独立 beta 合并分支整合 canvas/skill；保留 beta 聚合查询与 TAP 报告器修复，保留三终态禁编、Toast 生命周期和错误审计增强，不向 canvas/skill 回灌 beta 提交。
+
+2026-11-02：统一公共业务错误 msg/message 提取及审批/Service 交接，不以文案决定权限、重试或落库结果；可观测包推荐 ^0.1.11，保留 0.1.10 计时能力起点及存量锁定版本。审批包仍为 0.2.11 并保留三终态兼容适配，Service Skill 更新至 0.2.19 避免与 beta 聚合指导版本重复。
 
 [PROTOCOL]: 变更时更新此头部，然后检查 AGENTS.md
