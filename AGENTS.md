@@ -15,6 +15,8 @@ Skill 内容以本仓库为单一真相源；makecli 通过 npx 分发，构建�
 
 修改 Skill 后运行 `node scripts/lint-skill-metadata.mjs` 及 `.github/workflows/skill-metadata-lint.yml` 中的契约测试；规则与可观测结果保持一致。
 
+2026-11-02：联系人辅助查询失败保留内部状态和原因，仅将展示投影为通用授权提示；补齐指南原文、错误/空目录区分及取消回归，不改 SDK、HTTP 或真实权限结果。
+
 2026-11-02：PR #114 同步最新 beta，版本冲突保留 make-app-service 0.2.20；保留 beta 公共业务错误文案合同与既有 appKey 统一注入规则，不新增行为。
 
 2026-11-02：appKey 注入收敛为一处权威规则和一个共享 URL 装饰器，其他章节引用；示例直接执行行为验证，不重建认证代理。

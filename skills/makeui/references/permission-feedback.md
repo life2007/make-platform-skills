@@ -87,7 +87,7 @@ type Props = Omit<MakeAppPermissionNoticeProps, 'administrators' | 'administrato
   auth: AdministratorApi; contextKey: string; payload?: DenialPayload;
 };
 type Help = { auth: AdministratorApi; contextKey: string; payload?: DenialPayload;
-  contacts: MakeAppAdministratorContact[]; status: MakeAppAdministratorStatus };
+  contacts: MakeAppAdministratorContact[]; status: MakeAppAdministratorStatus; failure?: unknown };
 
 export function AppPermissionFeedback({ auth, contextKey, payload, ...view }: Props) {
   const embedded = payload?.data?.appAdministrators;
@@ -101,9 +101,7 @@ export function AppPermissionFeedback({ auth, contextKey, payload, ...view }: Pr
     Promise.resolve().then(() => query.call(auth)).then(
       contacts => { if (active) setHelp({ ...snapshot, contacts: contacts.map(contact => ({ ...contact, avatarUrl: contact.avatarUrl ?? undefined })), status: 'ready' }); },
       error => {
-        // An undeployed optional endpoint is a quiet generic-help fallback.
-        const endpointMissing = error !== null && typeof error === 'object' && 'status' in error && error.status === 404;
-        if (active) setHelp({ ...snapshot, contacts: [], status: endpointMissing ? 'ready' : 'error' });
+        if (active) setHelp({ ...snapshot, contacts: [], status: 'error', failure: error });
       },
     );
     return () => { active = false; };
@@ -112,12 +110,14 @@ export function AppPermissionFeedback({ auth, contextKey, payload, ...view }: Pr
   return <MakeAppPermissionNotice {...view}
     retryStatus={view.retryStatus === 'denied' ? 'idle' : view.retryStatus}
     administrators={Array.isArray(embedded) ? embedded : current?.contacts ?? []}
-    administratorStatus={Array.isArray(embedded) ? 'ready' : current?.status ?? (typeof auth.getAppAdministrators === 'function' ? 'loading' : 'ready')}
+    administratorStatus={Array.isArray(embedded) || current?.status === 'error' ? 'ready' : current?.status ?? (typeof auth.getAppAdministrators === 'function' ? 'loading' : 'ready')}
   />;
 }
 ```
 
 Embedded contacts render immediately; an explicit empty array is authoritative and triggers no query. Missing contacts use `auth.getAppAdministrators()` only when installed and available. SDK lookup has its own deadline and login/logout lifecycle; the host ignores stale responses on unmount or context changes. Missing capability or endpoint keeps generic guidance and does not block App readiness; report independent contact lookup as degraded, not verified. No permanent unsupported-capability cache prevents a later entry from discovering backend rollout. Never query protected records to obtain contacts, query IAM/Console from UI, or invent an SDK version supporting the method.
+
+Apply the [auth fallback contract](../../make-app-auth/references/access-help.md#staggered-release-fallback): `status: 'error'` and `failure` remain private to the current lookup generation; only the displayed administrator status becomes `ready`. Do not pass raw failures to the component, persist them, or change real access/retry state. Successful empty results still have no failure. Existing installed Apps need an explicit host-adapter update, tests and redeployment; updating this Skill alone does not change their bundles.
 
 The `api` member is an existing SDK client member used only for structural type compatibility, never a contact-query fallback. Keep the helper optional so a client compiled against older SDK declarations can pass to this adapter. Verify both old/new SDK types as well as runtime behavior; a JavaScript `typeof` test alone does not prove TypeScript compatibility.
 
