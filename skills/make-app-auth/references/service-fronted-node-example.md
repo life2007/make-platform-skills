@@ -45,10 +45,7 @@ export const listRecords = (entityKey: string, payload: unknown) =>
 - `/api/make/auth/**` and `/api/make/oauth/**` forward to the published
   make-gateway auth namespace. Preserve the upstream status, `Set-Cookie`, and
   `Location`; use manual redirect handling.
-  The shared proxy injects one configured outer query `appKey` as described and
-  tested in `auth-app-context.md`; do not rewrite OAuth values or request bodies.
-  Reuse that URL decorator in all business adapters and internal Service Make
-  calls too; internal callers do not pass through the browser route dispatcher.
+  Apply the [shared App context contract](auth-app-context.md) in the existing Make client.
 - `/api/make/app/**` contains explicitly registered Service business routes.
   Do not create a broad `/api/make/**` passthrough; unmatched paths fail closed.
 - `MAKE_APP_LOCAL_PREVIEW=true` may provide only the documented local preview
@@ -67,10 +64,7 @@ client-provided forwarded-host header.
 - Local-preview paths use `makecli configure resolve` and server-side credentials
   only; published paths use the internal `/make/**` scope.
 - Query strings do not bypass the local-preview path guard.
-- Forged/duplicate appKey values cannot override `MAKE_APP_KEY`; GET and native
-  Node HTTP POST keep all other OAuth values, body bytes and Content-Type.
-- An unbound/empty login appId still reaches IAM using configured appKey; a
-  non-empty conflicting appId fails closed, and IAM denial is never bypassed.
+- Run the [shared App context checks](auth-app-context.md#verification).
 - Unknown `/api/make/**` routes return a closed failure response.
 
 Read `service-fronted-mode.md` for the full local-preview matrix, proxy rules,

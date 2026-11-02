@@ -113,7 +113,7 @@ browser -> /api/make/auth/** -> App Service -> http://make-gateway/make/auth/**
 browser -> /api/make/oauth/** -> App Service -> http://make-gateway/make/oauth/**
 ```
 
-The shared gateway-client URL decorator sets exactly one outer query `appKey` from central `config.appKey` on every Make request, including browser auth/oauth proxies, explicit business adapters and internal current-context/session checks. Override browser values; follow `auth-app-context.md` for duplicate handling, old-App compatibility and OAuth transaction boundaries. Keep body, other query values and response redirects unchanged.
+Use the existing Make client with the [shared App context contract](auth-app-context.md) for upstream calls in this mode.
 
 Service code running inside the cluster must call k8s-internal make-gateway routes without the external `/api` prefix. UI code must not call internal routes directly.
 
@@ -233,6 +233,7 @@ applyForwardedHostContext(businessHeaders, inboundHeaders);
 
 Internal make-gateway URLs must not use the external `/api` prefix:
 
+<!-- make-upstream-example: published -->
 ```ts
 const makeAuthBaseUrl = 'http://make-gateway/make';
 const makeBusinessBaseUrl = 'http://make-gateway/make';
@@ -240,9 +241,7 @@ businessHeaders.set('Content-Type', 'application/json');
 businessHeaders.set('X-Make-Target', 'MakeService.ListResources');
 const recordPayload = { appKey: config.appKey, entityKey, fields, pagination };
 
-// This seam belongs in the shared Make client, not in individual route handlers.
-// withMakeAppContext is the URL decorator from auth-app-context.md.
-const makeFetch = (url, init) => fetch(withMakeAppContext(url, config), init);
+// makeFetch is the host's existing shared Make client.
 await makeFetch(`${makeAuthBaseUrl}/auth/current-context`, { headers: authHeaders, redirect: 'manual' });
 await makeFetch(`${makeBusinessBaseUrl}/data/v1/record`, {
   method: 'POST',
@@ -253,6 +252,7 @@ await makeFetch(`${makeBusinessBaseUrl}/data/v1/record`, {
 
 Local-preview URLs are different because they leave the user's machine through the public gateway resolved by makecli:
 
+<!-- make-upstream-example: local-preview -->
 ```ts
 const publicGatewayOrigin = readMakecliResolveJson().make_api_origin;
 const localPreviewBaseUrl = `${publicGatewayOrigin}/api/make`;
@@ -299,7 +299,7 @@ These checks belong to the agent, generated tests, CI, or publish pipeline. Do n
 - UI uses `createMakeAppAuth({ gatewayBaseUrl: "/api/make", unifiedLogin: true, apiAuthRedirect: true })`, then calls `auth.api("/app/**")` for Service-owned business routes.
 - Service calls internal business routes such as `http://make-gateway/make/meta/**` and `http://make-gateway/make/data/**`.
 - Service calls internal auth routes such as `http://make-gateway/make/auth/**`.
-- Browser-driven and internal Make calls use the same configured appKey decorator, including auth/oauth, business and future paths. Missing/blank MAKE_APP_KEY stops startup; cover duplicate values, OAuth preservation and unbound App identities reaching real IAM in `auth-app-context.md`.
+- Run the [shared App context verification](auth-app-context.md#verification).
 - Service does not call k8s-internal `/api/make/auth/**`, `/api/make/oauth/**`, `/api/make/meta/**`, or `/api/make/data/**`; `/api/make` is only for browser/ingress access.
 - Local preview calls makecli resolve `make_api_origin` with `/api/make/**`, not k8s-internal `/make/**`.
 - Published mode and local preview mode are both covered by contract tests; tests must fail if `MAKE_APP_LOCAL_PREVIEW=false` still routes upstream calls through `/api/make`.
