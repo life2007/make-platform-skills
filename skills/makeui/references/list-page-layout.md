@@ -74,13 +74,13 @@ Do not pass the desktop `listToolbar`, `listContent`, CanvasTable host, or deskt
 Phone defaults:
 
 - card body click opens the full-screen detail task route and does not create record selection
-- writable cards load [`make-app-actions`](../../make-app-actions/) and use its `mobile-card-actions.md` reference for clicked-record edit/delete permission and precheck behavior
+- writable cards load [`make-app-actions`](../../make-app-actions/) and use its `mobile-card-actions.md` reference for clicked-record edit/delete permissions and the same host controller and precheck policy as PC
 - no CanvasTable, record checkbox, select-all, selection action bar, batch edit, or other batch operation
 - no group or sort trigger, even when the desktop/tablet View already supports those capabilities
 - search stays in one compact phone toolbar; when advanced filtering is enabled or requested, place its filter trigger beside search instead of stacking desktop buttons vertically. Use medium visual controls (`size="middle"`, the library's default medium size, or equivalent) with matching visible heights, not CSS-enlarged small controls, while retaining at least 44px touch targets. A `search-only` list has no filter trigger.
 - pull-to-refresh starts only at the top of the list's own scroll region and preserves applied search/filter context; do not show a separate refresh button or refresh icon on the phone toolbar, even if desktop/tablet has one
 - when advanced filtering is enabled or requested, the filter trigger opens the package panel in a host mobile Sheet with `layout="mobile"`; do not reuse the desktop Popover trigger/content fragment
-- create uses the permission-gated floating action and full-screen new task route
+- create uses the permission-gated floating action and full-screen new task route; enforce [phone create reachability](mobile-defaults.md#新建入口可达性), including an authorized empty list and filter-empty results
 
 Phone card visual contract:
 

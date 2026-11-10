@@ -1,5 +1,7 @@
 # Make Data Adapter
 
+本文件描述 Make Data 普通记录适配。审批任务办理的 recordPatch 属于 Workflow：按 [审批接口合同](../../make-app-approval/references/workflow-api.md) 保留任务字段格式与节点授权，不进入这里的普通 Lookup 关系合成和记录更新链路。任务字段基础定义及附件类型核验读取 bpm-node-form-metadata 的 TASK 场景，不使用下文普通权限 Schema 的字段来源，不回退普通 entity 补源字段，也不以节点元数据扩大节点授权。
+
 Use this reference when implementing Service adapters that call Make platform APIs.
 
 ## Adapter ownership
@@ -216,7 +218,9 @@ Rules:
 
 ## Lookup options adapter/service
 
-Lookup option service should:
+本节 Schema 解析步骤只用于普通对象 Lookup。审批新建 START 与任务 TASK 统一按 [节点 Lookup 依赖合同](../../make-app-approval/references/lookup-metadata.md) 读取节点内关系和目标 key/type；每次候选读取重验相应启动字段/任务授权，并保留目标对象、字段和记录的读取权限，不通过普通 relation/entity/Schema 补齐 BPM 元数据。
+
+Ordinary Lookup option service should:
 
 1. read runtime schema
 2. find the source entity and lookup field
@@ -232,7 +236,7 @@ Rules:
 - target record reads still go through `/make/data/v1/record` with forwarded login context, not makecli
 - reject unsupported relation direction, non-lookup fields, and missing target metadata with 400
 - do not leak full target records into dropdown APIs by default
-- In create mode, resolve the Lookup source field from 普通新建的 `createFields` 或 审批新建的权威 启动配置 字段；resolve the Lookup target entity and target display fields from the target's visible `fields`. Do not expose a target field solely because it is creatable.
+- In ordinary create mode, resolve the Lookup source field from `createFields`; resolve the Lookup target entity and target display fields from the target's visible `fields`. Do not expose a target field solely because it is creatable. BPM source authorization and dependency resolution follow the START/TASK contract above; target read permission checks still apply.
 
 ## Lookup relation update service
 
@@ -287,3 +291,12 @@ Make-backed Service calls to gateway must preserve the request context needed by
 Derive or sanitize forwarded host/proto through the shared helper described by `make-app-auth` / `make-app-runtime`; do not blindly trust arbitrary client-supplied forwarded headers. Redact all auth/session header values in logs and errors.
 
 `make-app-service` owns the requirement that Make-backed record/data adapters must not drop the established login context before calling gateway. The exact login implementation, session lifecycle, 401/403 UX, and auth proxy behavior still belong to `make-app-auth`.
+
+
+### 应用名称来源
+
+- 应用显示名称来自当前应用运行时 Meta/Schema 接口的 `app.name`（或已核验接口等价的 name），统一归一为共享 `appName`。若现有聚合接口已返回 appName，则保证它来源于最新后端应用名称；不按字段名猜测未知响应层级。
+- 保持既有 UI → Service → Make 调用链，在共享适配器统一处理，不让各页面重复读取或从本地 DSL、构建配置和生成提示中固定名称。若返回原始代理合同，不为改名需求擅自改写原信封；在既有共享适配层归一，合同变更同步 apps/docs/api.md。
+- `appKey` 是稳定标识，不使用名称构造请求、路由、权限资源或缓存键。后台改名后，页面刷新／显式 Schema 刷新必须能读取更新；若缓存 Schema 或应用元信息，明确有效期和刷新失效方式，禁止无限缓存旧名称。隔离应用、租户、主体和访问代际，忽略过期响应。
+- 优先有效接口名称；缺失或空白名称按宿主合同统一使用 appKey／中性占位。请求失败沿用真实错误处理，不把本地名称包装成接口成功；不泄漏其他应用的旧名称。
+- 验证名称原样映射、后台改名后的重读／缓存失效、缺失名称和跨应用过期响应。UI 消费与所有应用名展示位置的约束交接 makeui 的动态应用名称合同，不改变用户姓名、业务页面标题、权限或认证语义。
